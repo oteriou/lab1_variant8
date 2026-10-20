@@ -24,6 +24,20 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# --- НОВАЯ ФУНКЦИЯ ОЧИСТКИ ---
+def clean_old_uploads(folder_path, max_files=10):
+    """Удаляет старые файлы, чтобы не забивать диск сервера (оставляет только max_files последних)"""
+    try:
+        # Получаем список всех файлов, кроме .gitkeep
+        files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f != '.gitkeep']
+        # Сортируем по времени изменения (самые старые в начале)
+        files.sort(key=os.path.getmtime)
+        # Удаляем файлы, пока их количество не станет равным max_files
+        while len(files) > max_files:
+            os.remove(files.pop(0))
+    except Exception as e:
+        print(f"Ошибка при очистке старых файлов: {e}")
+# ------------------------------
 
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -140,6 +154,9 @@ def index():
 
     original_path = os.path.join(app.config["UPLOAD_FOLDER"], original_name)
     result_path = os.path.join(app.config["UPLOAD_FOLDER"], result_name)
+
+    # ВЫЗОВ ФУНКЦИИ ОЧИСТКИ ПЕРЕД СОХРАНЕНИЕМ НОВЫХ ФАЙЛОВ
+    clean_old_uploads(app.config["UPLOAD_FOLDER"], max_files=10)
 
     img.save(original_path, "PNG")
     result_img = swap_halves(img, mode)
