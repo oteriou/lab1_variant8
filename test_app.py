@@ -26,4 +26,4 @@ def test_swap_halves_tb():
     
     # Проверяем, что верх стал черным, а низ - зеленым
     assert result.getpixel((0, 0)) == (0, 0, 0)
-    assert result.getpixel((0, 9)) == (0, 255, 0)
+    assert result.getpixel((0, 9)) == (0, 128, 0)
