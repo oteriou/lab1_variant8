@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Лабораторная работа №1 — вариант 8</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; max-width: 1100px; }
+        .row { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 20px; }
+        .card { border: 1px solid #ccc; border-radius: 8px; padding: 12px; background: #fafafa; }
+        img { max-width: 100%; height: auto; }
+        .card img { max-width: 420px; border: 1px solid #999; }
+        .graph { width: 100%; max-width: 1000px; margin-top: 10px; }
+        .error { color: #b00020; font-weight: bold; }
+        label { display: block; margin: 6px 0; }
+        button { padding: 8px 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Лабораторная работа №1</h1>
+    <h2>Вариант 8: обмен частей изображения и график распределения цветов</h2>
+
+    <p>
+        Приложение меняет местами левую и правую части изображения
+        либо верхнюю и нижнюю — по выбору пользователя.
+        Для исходного и обработанного изображения строится график
+        распределения цветовых каналов R, G, B.
+    </p>
+
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        <p>
+            <label>Выберите изображение:</label>
+            <input type="file" name="image" accept="image/*" required>
+        </p>
+
+        <p>Режим обработки:</p>
+        <label>
+            <input type="radio" name="mode" value="lr" checked>
+            Поменять местами левую и правую части
+        </label>
+        <label>
+            <input type="radio" name="mode" value="tb">
+            Поменять местами верхнюю и нижнюю части
+        </label>
+
+        <p>
+            <label>Проверка на робота: {{ captcha_q }} =</label>
+            <input type="number" name="captcha" required>
+        </p>
+
+        <button type="submit">Обработать изображение</button>
+    </form>
+
+    {% if original_url %}
+        <div class="row">
+            <div class="card">
+                <h3>Исходное изображение</h3>
+                <img src="{{ original_url }}" alt="Исходное изображение">
+            </div>
+
+            <div class="card">
+                <h3>
+                    Результат:
+                    {% if mode == "lr" %}
+                        обмен левой и правой частей
+                    {% else %}
+                        обмен верхней и нижней частей
+                    {% endif %}
+                </h3>
+                <img src="{{ result_url }}" alt="Обработанное изображение">
+            </div>
+        </div>
+
+        <h3>График распределения цветов</h3>
+        <img src="data:image/png;base64,{{ hist_b64 }}" alt="График распределения цветов">
+    {% endif %}
+</body>
+</html>
