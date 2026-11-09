@@ -3,8 +3,11 @@ import io
 import base64
 import uuid
 import random
+import hashlib
+import re
+from datetime import date
 
-from flask import Flask, render_template, request, session, url_for
+from flask import Flask, render_template, request, session, url_for, make_response
 from PIL import Image
 
 import numpy as np
@@ -15,7 +18,7 @@ import matplotlib.pyplot as plt
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp"}
-MAX_CONTENT_LENGTH = 8 * 1024 * 1024  # 8 МБ
+MAX_CONTENT_LENGTH = 8 * 1024 * 1024  # 8 мб
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
@@ -24,35 +27,39 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# --- НОВАЯ ФУНКЦИЯ ОЧИСТКИ ---
+# токен и функция для верификации
+VERIFY_TOKEN = 'TUSUR-EVSEEVA-20261108-1FDE6140'
+
+def normalize_html(html: str) -> str:
+    """приводит HTML к каноническому виду для хэширования."""
+    lines = [line.strip() for line in html.split('\n')]
+    lines = [line for line in lines if line]
+    lines = [re.sub(r'\s+', ' ', line) for line in lines]
+    return '\n'.join(lines)
+
+# функция очистки старых файлов
 def clean_old_uploads(folder_path, max_files=10):
-    """Удаляет старые файлы, чтобы не забивать диск сервера (оставляет только max_files последних)"""
+    """удаляет старые файлы, чтобы не забивать диск сервера"""
     try:
-        # Получаем список всех файлов, кроме .gitkeep
         files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f != '.gitkeep']
-        # Сортируем по времени изменения (самые старые в начале)
         files.sort(key=os.path.getmtime)
-        # Удаляем файлы, пока их количество не станет равным max_files
         while len(files) > max_files:
             os.remove(files.pop(0))
     except Exception as e:
-        print(f"Ошибка при очистке старых файлов: {e}")
-# ------------------------------
+        print(f"ошибка при очистке старых файлов: {e}")
 
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 def new_captcha() -> str:
-    """Простая арифметическая капча. Ответ хранится в session."""
+    """простая арифметическая капча"""
     a = random.randint(2, 9)
     b = random.randint(2, 9)
     session["captcha_answer"] = a + b
     return f"{a} + {b}"
 
-
 def swap_halves(img: Image.Image, mode: str) -> Image.Image:
-    """mode='lr' — лево/право, mode='tb' — верх/низ."""
+    """меняет местами половины изображения"""
     img = img.convert("RGB")
     w, h = img.size
     result = Image.new("RGB", (w, h))
@@ -73,9 +80,8 @@ def swap_halves(img: Image.Image, mode: str) -> Image.Image:
         result = img.copy()
     return result
 
-
 def make_color_histogram(original: Image.Image, result: Image.Image) -> str:
-    """Строит графики R/G/B для обоих изображений, возвращает base64 PNG."""
+    """строит графики RGB для обоих изображений, возвращает base64 PNG"""
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
     for ax, img, title in zip(
@@ -99,7 +105,6 @@ def make_color_histogram(original: Image.Image, result: Image.Image) -> str:
     plt.close(fig)
     buf.seek(0)
     return base64.b64encode(buf.read()).decode("ascii")
-
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -155,7 +160,7 @@ def index():
     original_path = os.path.join(app.config["UPLOAD_FOLDER"], original_name)
     result_path = os.path.join(app.config["UPLOAD_FOLDER"], result_name)
 
-    # ВЫЗОВ ФУНКЦИИ ОЧИСТКИ ПЕРЕД СОХРАНЕНИЕМ НОВЫХ ФАЙЛОВ
+    # вызов функции очистки перед сохранением новых файлов
     clean_old_uploads(app.config["UPLOAD_FOLDER"], max_files=10)
 
     img.save(original_path, "PNG")
@@ -174,6 +179,25 @@ def index():
         mode=mode,
     )
 
+@app.route('/verify')
+def verify():
+    today = date.today().isoformat()
+    
+    html = f'''<html>
+    <head><title>Verification</title></head>
+    <body style="font-family: Arial; margin: 40px;">
+        <h1>Verification</h1>
+        <p>Token: {VERIFY_TOKEN}</p>
+        <p>Date: {today}</p>
+    </body>
+    </html>'''
+    
+    normalized = normalize_html(html)
+    body_hash = hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+    
+    response = make_response(html)
+    response.headers['X-Verify-Hash'] = body_hash
+    return response
 
 @app.errorhandler(413)
 def too_large(e):
@@ -181,9 +205,8 @@ def too_large(e):
     return render_template(
         "index.html",
         captcha_q=session["captcha_q"],
-        error="Файл слишком большой. Максимальный размер — 8 МБ.",
+        error="Файл слишком большой. Максимальный размер — 8 мб.",
     ), 413
-
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
