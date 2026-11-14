@@ -28,7 +28,7 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # токен и функция для верификации
-VERIFY_TOKEN = 'TUSUR-EVSEEVA-20261108-1FDE6140'
+VERIFY_TOKEN = 'TUSUR-EVSEEVA-20261109-61D780A5'
 
 def normalize_html(html: str) -> str:
     """приводит HTML к каноническому виду для хэширования."""
