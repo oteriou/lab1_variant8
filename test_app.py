@@ -18,6 +18,7 @@ def test_swap_halves_lr():
 def test_swap_halves_tb():
     # Создаем картинку, верх - зеленый, низ - черный
     img = Image.new("RGB", (10, 10), "green")
+    
     for x in range(10):
         for y in range(5, 10):
             img.putpixel((x, y), (0, 0, 0))
