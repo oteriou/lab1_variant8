@@ -27,3 +27,11 @@ def test_swap_halves_tb():
     # Проверяем, что верх стал черным, а низ - зеленым
     assert result.getpixel((0, 0)) == (0, 0, 0)
     assert result.getpixel((0, 9)) == (0, 128, 0)
+
+def test_allowed_file():
+    # Проверяем, что разрешенные форматы проходят, а запрещенные - нет
+    from hello import allowed_file
+    assert allowed_file("image.png") == True
+    assert allowed_file("photo.jpg") == True
+    assert allowed_file("document.pdf") == False
+    assert allowed_file("script.exe") == False
